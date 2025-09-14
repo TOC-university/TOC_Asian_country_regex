@@ -9,7 +9,10 @@ FOOTNOTE = re.compile(r"\[\d+\]")
 WHITES = re.compile(r"\s+")
 
 KEYWORDS = re.compile(
-    r"(?i)\b(University|College|Institute|Academy|Polytechnic|Universidad|Universität|Université|มหาวิทยาลัย|วิทยาลัย)\b"
+    r"(?i)\b("
+    r"University|College|Institute|Polytechnic|Academy|Faculty|School"
+    r"|Universidad|Instituto|Escuela|Politécnico|Tecnológico|Tecnológica"
+    r")\b"
 )
 
 def _clean(s: str) -> str:
