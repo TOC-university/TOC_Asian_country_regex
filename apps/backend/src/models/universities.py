@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, conlist
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 class UniversitiesRequest(BaseModel):
     min_count: int = Field(0, ge=0, description="Minimum universities to collect")
@@ -8,5 +8,15 @@ class UniversitiesRequest(BaseModel):
 
 class UniversitiesResponse(BaseModel):
     count: int
-    names: List[str] | None
+    names: List[Tuple[str, str]] | None
     sources: List[str] | None
+
+class UniversityRequest(BaseModel):
+    university: str
+
+class UniversityResponse(BaseModel):
+    name: str
+    aka: str | None = None
+    website: str | None = None
+    establishedAt: int | None = None
+    mainCampus: dict | None = None 

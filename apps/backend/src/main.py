@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from api.routers.countries import router as countries_router
 from api.routers.universities import router as universities_router
+from api.routers.u_detail import router as university_details_router
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +19,7 @@ app.add_middleware(
 
 app.include_router(countries_router)
 app.include_router(universities_router)
+app.include_router(university_details_router)
 
 @app.get("/health")
 def health():
