@@ -10,11 +10,7 @@ router = APIRouter(prefix="/crawl", tags=["universities"])
 
 @router.post("/universities", response_model=UniversitiesResponse)
 async def crawl_universities_route(req: UniversitiesRequest):
-    names, sources = crawl_universities_orch(
-        min_count=req.min_count,
-        limit=req.limit,
+    names, sources, pairs = crawl_universities_orch(
         countries=req.countries,
     )
-    if req.limit is not None:
-        names = names[:req.limit]
     return UniversitiesResponse(count=len(names), names=names, sources=sources)
