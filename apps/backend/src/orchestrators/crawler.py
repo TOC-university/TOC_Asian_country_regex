@@ -12,15 +12,13 @@ def crawl_countries() -> Tuple[List[str], List[str]]:
     display = [s.replace("_", " ") for s in slugs]
     return display, slugs
 
-def crawl_universities(
-    min_count: Optional[int] = None,         
-    limit: Optional[int] = None,             
+def crawl_universities(        
     countries: Optional[List[str]] = None
-) -> Tuple[List[IndexUniversity], List[str]]:
+) -> Tuple[List[IndexUniversity], List[str], List[str]]:            # University, Sources, Pairs
     mapping = discover_country_pages()
     names: List[IndexUniversity] = []
     sources: List[str] = []
-
+    pairs: List[Tuple[str, str]] = []
 
     country_slugs = sorted(mapping.keys())
     if countries:
@@ -29,36 +27,30 @@ def crawl_universities(
 
     for slug in country_slugs:
         path = mapping[slug]
+        country_name = slug.replace("_", " ").title()
         chunk = extract_universities_from_country_page(path)
         before = len(names)
 
-        for u in chunk:
-            if limit is not None and len(names) >= limit:
-                break
-            abbr = u[1]
-            if abbr == '':
-                abbr = extract_universities_detail_from_university_page(u[2])['abbr']
+        for u_name, abbreviate, u_path in chunk:
+            if abbreviate == '':
+                abbreviate = extract_universities_detail_from_university_page(u_path)['abbr']
             display = slug.replace("_", " ")
-            names.append(IndexUniversity(name=u[0], abbreviation=abbr, country=display, path=u[2]))
-            if limit is not None and len(names) >= limit:
-                break
+            names.append(IndexUniversity(name=u_name, abbreviation=abbreviate, country=display, path=u_path))
+            pairs.append((u_name, country_name))
 
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
             sources.append(src)
-        if limit is not None and len(names) >= limit:
-            break   
-        # if min_count is not None and len(names) >= min_count:
-        #     break
+        time.sleep(settings.SLEEP_SEC)
+
 
     result = sorted(names, key=lambda x: x.name)
-    if limit is not None:
-        result = result[:limit]
-    return result, sources
+    seen = set([n.name for n in result])
+    pairs = [(u, c) for (u, c) in pairs if u in seen]
+    return result, sources, pairs
 
 def crawl_university_detail(university: str) -> dict:
     u_data = extract_universities_detail_from_university_page(university)
     # Placeholder for actual implementation
     # This function should fetch and return detailed information about the university
     return u_data
-    

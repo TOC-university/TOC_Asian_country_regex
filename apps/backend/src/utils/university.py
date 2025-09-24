@@ -9,11 +9,31 @@ BRACKET = re.compile(r"\s*\(([^)]*)\)\s*")
 FOOTNOTE = re.compile(r"\[\d+\]")
 WHITES = re.compile(r"\s+")
 
-KEYWORDS = re.compile(
+INSTITUTION_KEYWORDS = re.compile(
     r"(?i)\b("
     r"University|College|Institute|Polytechnic|Academy|Faculty|School"
     r"|Universidad|Instituto|Escuela|Politécnico|Tecnológico|Tecnológica"
     r")\b"
+)
+
+GENERIC_SLUGS = {
+    "University", "College", "Institute", "Academy", "Faculty", "School",
+    "University_system", "University_systems", "National_key_university",
+    "University_(hierarchy)", "University_(disambiguation)",
+    "Higher_education", "List_of_universities", "College_(disambiguation)"
+}
+GENERIC_TEXT_EXACT = {
+    "university", "college", "institute", "academy", "faculty", "school",
+    "university system", "university systems", "national key university"
+}
+GENERIC_TEXT_CONTAINS = re.compile(r"(?i)\b(List of|Category:)\b")
+
+SLUG_LOOKS_INSTITUTION = re.compile(
+    r"(?x)"
+    r"(?:"
+    r"^[A-Z][A-Za-z0-9\-_%]+_(University|College|Institute|Academy|Faculty|School)\b"
+    r"|^(University|College|Institute|Academy|Faculty|School)_of_[A-Z]"
+    r")"
 )
 
 def _clean(s: str) -> str:
@@ -22,22 +42,44 @@ def _clean(s: str) -> str:
     s = WHITES.sub(" ", s).strip(" \t\n\r-–—")
     return s
 
+def _is_generic(slug: str, text: str) -> bool:
+    if slug in GENERIC_SLUGS:
+        return True
+    t = text.strip().lower()
+    if t in GENERIC_TEXT_EXACT:
+        return True
+    if GENERIC_TEXT_CONTAINS.search(text):
+        return True
+    return False
+
 def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, str]]:        #name abbreviate path
     print('fetching', path)
     html = fetch(path)
-    names: List[Tuple[str, str, str]] = []
+    seen = set()
+    result: List[Tuple[str, str, str]] = []
 
     matched_anchor = ANCHOR.findall(html)
-    for u_path, text in matched_anchor:
-        possible_abbr = BRACKET.findall(text)
-        t, a = _clean(text), possible_abbr[0] if possible_abbr else ''
-        if len(t) < 3: 
+    for u_path, raw_text in matched_anchor:
+        possible_abbr = BRACKET.findall(raw_text)
+        text, abbreviate = _clean(raw_text), possible_abbr[0] if possible_abbr else ''
+
+
+        if len(text) < 3: 
             continue
-        if "List of" in t or "Category:" in t:
+        if not INSTITUTION_KEYWORDS.search(text):
             continue
-        if KEYWORDS.search(t):
-            if t not in [tt for tt, _, _ in names]:
-                names.append((t, a, u_path))
-    # if len(names) < 50:
-    #     names = [(_clean(t), _clean(''), u_path) for u_path, t in ANCHOR.findall(html) if len(_clean(t)) >= 3]
-    return names
+        if _is_generic(u_path, text):
+            continue
+        if not SLUG_LOOKS_INSTITUTION.search(u_path):
+            if not re.search(r"(?i)\b(University|College|Institute|Academy|Faculty|School)\b", text):
+                continue
+            if re.fullmatch(r"(?i)\b(University|College|Institute|Academy|Faculty|School)s?\b", text):
+                continue
+            if re.search(r"(?i)\b(system|systems|ranking|education|students?)\b", text):
+                continue
+
+        if text not in seen:
+            seen.add(text)
+            result.append((text, abbreviate, u_path))
+
+    return result
