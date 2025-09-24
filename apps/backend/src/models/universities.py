@@ -6,17 +6,16 @@ class UniversitiesRequest(BaseModel):
     limit: int | None = Field(None, ge=1, description="Optional cap on number returned")
     countries: List[str] = Field(default_factory=list, description="Filter by country names")
 
+class IndexUniversity(BaseModel):
+    name: str
+    abbreviation: str | None = None
+    country: str | None = None
+    path: str | None = None
+
 class UniversitiesResponse(BaseModel):
     count: int
-    names: List[Tuple[str, str]] | None
+    names: List[IndexUniversity] | None
     sources: List[str] | None
 
 class UniversityRequest(BaseModel):
     university: str
-
-class UniversityResponse(BaseModel):
-    name: str
-    aka: str | None = None
-    website: str | None = None
-    establishedAt: int | None = None
-    mainCampus: dict | None = None 

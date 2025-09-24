@@ -2,10 +2,10 @@ import re
 from typing import List, Tuple
 from .http import fetch
 
-A_TAG = r'<a[^>]*?href="/wiki/([^"#?:]+)"[^>]*>([^<]+)</a>'
+A_TAG = r'<a[^>]*?href="(/wiki/[^"#?:]+)"[^>]*>([^<]+)</a>'
 AFTER_A = r'([^<]*?)'
 ANCHOR = re.compile(A_TAG, re.I)
-BRACKET = re.compile(r"\s*\([^)]*\)\s*")
+BRACKET = re.compile(r"\s*\(([^)]*)\)\s*")
 FOOTNOTE = re.compile(r"\[\d+\]")
 WHITES = re.compile(r"\s+")
 
@@ -22,20 +22,22 @@ def _clean(s: str) -> str:
     s = WHITES.sub(" ", s).strip(" \t\n\r-–—")
     return s
 
-def extract_universities_from_country_page(path: str) -> List[Tuple[str, str]]:
+def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, str]]:        #name abbreviate path
+    print('fetching', path)
     html = fetch(path)
-    names: List[Tuple[str, str]] = []
+    names: List[Tuple[str, str, str]] = []
 
     matched_anchor = ANCHOR.findall(html)
-    for _, text in matched_anchor:
-        print(text)
-        t, a = _clean(text), _clean('')
+    for u_path, text in matched_anchor:
+        possible_abbr = BRACKET.findall(text)
+        t, a = _clean(text), possible_abbr[0] if possible_abbr else ''
         if len(t) < 3: 
             continue
         if "List of" in t or "Category:" in t:
             continue
         if KEYWORDS.search(t):
-            names.append((t, a))
-    if len(names) < 50:
-        names = [(_clean(t), "") for _, t in ANCHOR.findall(html) if len(_clean(t)) >= 3]
+            if t not in [tt for tt, _, _ in names]:
+                names.append((t, a, u_path))
+    # if len(names) < 50:
+    #     names = [(_clean(t), _clean(''), u_path) for u_path, t in ANCHOR.findall(html) if len(_clean(t)) >= 3]
     return names

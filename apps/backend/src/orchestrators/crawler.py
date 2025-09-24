@@ -4,6 +4,7 @@ from utils.country import discover_country_pages
 from utils.university import extract_universities_from_country_page
 from utils.u_detail import extract_universities_detail_from_university_page
 from config.settings import settings
+from models import IndexUniversity
 
 def crawl_countries() -> Tuple[List[str], List[str]]:
     mapping = discover_country_pages()
@@ -15,9 +16,9 @@ def crawl_universities(
     min_count: Optional[int] = None,         
     limit: Optional[int] = None,             
     countries: Optional[List[str]] = None
-) -> Tuple[List[Tuple[str, str]], List[str]]:
+) -> Tuple[List[IndexUniversity], List[str]]:
     mapping = discover_country_pages()
-    names: List[Tuple[str, str]] = []
+    names: List[IndexUniversity] = []
     sources: List[str] = []
 
 
@@ -31,34 +32,33 @@ def crawl_universities(
         chunk = extract_universities_from_country_page(path)
         before = len(names)
 
-        for n in chunk:
+        for u in chunk:
             if limit is not None and len(names) >= limit:
                 break
-            names.append(n)
+            abbr = u[1]
+            if abbr == '':
+                abbr = extract_universities_detail_from_university_page(u[2])['abbr']
+            display = slug.replace("_", " ")
+            names.append(IndexUniversity(name=u[0], abbreviation=abbr, country=display, path=u[2]))
+            if limit is not None and len(names) >= limit:
+                break
+
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
             sources.append(src)
-            
-        if min_count is not None and len(names) >= min_count:
-            break
+        if limit is not None and len(names) >= limit:
+            break   
+        # if min_count is not None and len(names) >= min_count:
+        #     break
 
-    result = sorted(names, key=lambda x: x[0])
+    result = sorted(names, key=lambda x: x.name)
     if limit is not None:
         result = result[:limit]
     return result, sources
 
 def crawl_university_detail(university: str) -> dict:
-    result = {}
+    u_data = extract_universities_detail_from_university_page(university)
     # Placeholder for actual implementation
     # This function should fetch and return detailed information about the university
-    return extract_universities_detail_from_university_page(university)
-    return {
-        "name": university,
-        "aka": "Example University",
-        "website": "http://www.example.edu",
-        "establishedAt": 1900,
-        "mainCampus": {
-            "address": "123 University St, City, Country",
-            "coordinates": {"lat": 0.0, "lng": 0.0}
-        }
-    }
+    return u_data
+    
