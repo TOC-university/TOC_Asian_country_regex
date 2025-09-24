@@ -7,9 +7,6 @@ router = APIRouter()
 
 @router.get("/logo")
 async def get_logo_info(name: str):
-    """
-    คืนเป็น JSON { name, logo_url } เพื่อให้ Swagger/ลูกค้าเห็น URL ของไฟล์
-    """
     path = await get_logo_for(name)
     if not path:
         raise HTTPException(status_code=404, detail="Logo not found")
@@ -18,9 +15,6 @@ async def get_logo_info(name: str):
 
 @router.get("/logo/image")
 async def get_logo_image(name: str):
-    """
-    ถ้าต้องการ endpoint คืนรูปโดยตรง
-    """
     path = await get_logo_for(name)
     if not path:
         raise HTTPException(status_code=404, detail="Logo not found")
