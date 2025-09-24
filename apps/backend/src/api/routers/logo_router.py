@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
-from services.logo_crawler import get_logo_for
+from orchestrators.logo_crawler import get_logo_for
 import os
 
 router = APIRouter()
