@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from api.routers.countries import router as countries_router
 from api.routers.universities import router as universities_router
 from api.routers.search import router as search_router
-from routers.logo_router import router as logo_router
+from api.routers.logo_router import router as logo_router
 
 BASE_DIR = os.path.dirname(__file__)  # path to apps/backend/src
 STATIC_DIR = os.path.join(BASE_DIR, "static")
