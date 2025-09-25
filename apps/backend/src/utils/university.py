@@ -2,9 +2,10 @@ import re
 from typing import List, Tuple
 from .http import fetch
 
-A_TAG = r'<a[^>]*?href="/wiki/([^"#?:]+)"[^>]*>([^<]+)</a>'
+A_TAG = r'<a[^>]*?href="(/wiki/[^"#?:]+)"[^>]*>([^<]+)</a>'
+AFTER_A = r'([^<]*?)'
 ANCHOR = re.compile(A_TAG, re.I)
-BRACKET = re.compile(r"\s*\([^)]*\)\s*")
+BRACKET = re.compile(r"\s*\(([^)]*)\)\s*")
 FOOTNOTE = re.compile(r"\[\d+\]")
 WHITES = re.compile(r"\s+")
 
@@ -51,20 +52,25 @@ def _is_generic(slug: str, text: str) -> bool:
         return True
     return False
 
-def extract_universities_from_country_page(path: str) -> List[str]:
+def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, str]]:        #name abbreviate path
+    print('fetching', path)
     html = fetch(path)
     seen = set()
-    result: List[str] = []
+    result: List[Tuple[str, str, str]] = []
 
-    for slug, raw_text in ANCHOR.findall(html):
-        text = _clean(raw_text)
-        if len(text) < 3:
+    matched_anchor = ANCHOR.findall(html)
+    for u_path, raw_text in matched_anchor:
+        possible_abbr = BRACKET.findall(raw_text)
+        text, abbreviate = _clean(raw_text), possible_abbr[0] if possible_abbr else ''
+
+
+        if len(text) < 3: 
             continue
         if not INSTITUTION_KEYWORDS.search(text):
             continue
-        if _is_generic(slug, text):
+        if _is_generic(u_path, text):
             continue
-        if not SLUG_LOOKS_INSTITUTION.search(slug):
+        if not SLUG_LOOKS_INSTITUTION.search(u_path):
             if not re.search(r"(?i)\b(University|College|Institute|Academy|Faculty|School)\b", text):
                 continue
             if re.fullmatch(r"(?i)\b(University|College|Institute|Academy|Faculty|School)s?\b", text):
@@ -74,6 +80,6 @@ def extract_universities_from_country_page(path: str) -> List[str]:
 
         if text not in seen:
             seen.add(text)
-            result.append(text)
+            result.append((text, abbreviate, u_path))
 
     return result

@@ -1,9 +1,11 @@
 import os
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from api.routers.countries import router as countries_router
 from api.routers.universities import router as universities_router
+from api.routers.u_detail import router as university_details_router
 from api.routers.search import router as search_router
 from api.routers.logo_router import router as logo_router
 
@@ -24,6 +26,7 @@ if not os.path.exists(STATIC_DIR):
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(countries_router)
 app.include_router(universities_router)
+app.include_router(university_details_router)
 app.include_router(search_router)
 app.include_router(logo_router)
 
