@@ -12,7 +12,7 @@ from api.routers.logo_router import router as logo_router
 BASE_DIR = os.path.dirname(__file__)  # path to apps/backend/src
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 
-app = FastAPI(title="TOC-country", version="0.1.0")
+app = FastAPI(title="TOC-university", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
