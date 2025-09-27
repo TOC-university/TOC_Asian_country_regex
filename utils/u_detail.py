@@ -24,22 +24,18 @@ def _is_valid_website(m: str) -> bool:
 
     return (len(after) == 1 or after[1] == '' or after[1] == 'en') and not KEYWORDS.search(m)
 
-def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr EstablishedYrs MainCampus Website
-    print('fetching', path)
-    html = fetch(path)
-    # html = html.split('<h2 id="See_also">See also</h2>')[0]
-    # html = html.split('<h2 id="References">References</h2>')[0]
-
+def _extract_abbreviate(html):
     in_bracket = BRACKET.findall(html)
     in_bracket = [b for b in in_bracket if b not in ['PDF', 'UTC'] and b.isalpha()]
     if not in_bracket:
         in_bracket = BOLD.findall(html)  
     in_bracket = [b for b in in_bracket if b not in ['PDF', 'UTC'] and b.isalpha()]
     
-    if len(in_bracket) == 0: # not found case
-        in_bracket.append(''.join([word[0] for word in path.split('/')[2].split('_') if word[0].isupper()]) + ' *') # make abbreviation from slug
-    abbreviation = in_bracket[0]
-    
+    # if len(in_bracket) == 0: # not found case
+    #     in_bracket.append(''.join([word[0] for word in path.split('/')[2].split('_') if word[0].isupper()]) + ' *') # make abbreviation from slug
+    return in_bracket[0]
+
+def _extract_established_year(html):
     estab_data = TH_TD.search(html)
     estab_data = estab_data.group(1) if estab_data else None
     estab_data = YRS.search(estab_data) if estab_data else None
@@ -49,17 +45,34 @@ def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr 
         estab_data = estab_data.group(1) if estab_data else None
     if not estab_data:
         estab_data = 'N/A'
+    return estab_data
 
-    campuses = []
+def _extract_faculties(html):
+    pass
 
-    faculty = []
+def _extract_campuses(html):
+    campuses = set()
+    for m in HREF_HTTP.finditer(html):
+        url = m.group(2)
+        text = m.group(0)
+        if _is_valid_website(url) and INSTITUTION_KEYWORDS.search(text):
+            campuses.add(url)
+    return list(campuses)
 
-
+def _extract_website(html):
     websites = [m.group(2) for m in HREF_HTTP.finditer(html) if _is_valid_website(m.group(2))]
-    website = websites[0] if websites else None
-    # website = HREF_HTTP.search(html).group(2) if HREF_HTTP.search(html) else None
-    print(abbreviation)
-    print(estab_data)
-    print(websites)
+    return websites[0] if websites else None
 
-    return {'abbr': abbreviation, 'estab': estab_data, 'campuses': campuses, 'website': website, 'faculty': faculty}
+def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr EstablishedYrs MainCampus Website
+    print('fetching', path)
+    html = fetch(path)
+    # html = html.split('<h2 id="See_also">See also</h2>')[0]
+    # html = html.split('<h2 id="References">References</h2>')[0]
+
+    abbreviation = _extract_abbreviate(html)
+    estab_data = _extract_established_year(html)
+    campuses = _extract_campuses(html)
+    faculties = _extract_faculties(html)
+    website = _extract_website(html)
+
+    return {'abbr': abbreviation, 'estab': estab_data, 'campuses': campuses, 'website': website, 'faculties': faculties}
