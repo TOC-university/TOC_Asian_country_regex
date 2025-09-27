@@ -22,6 +22,6 @@ jobs:
         run: docker build --rm -t regex-image .
 
       - name: Run container
-        run: docker run -d -p 8000:8000 --name regex-container regex-image
+        run: docker run --restart unless-stopped -d -p 8000:8000 --name regex-container regex-image
 
    
