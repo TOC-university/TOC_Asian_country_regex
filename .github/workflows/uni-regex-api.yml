@@ -3,8 +3,6 @@ on:
   push:
     branches: 
       - main
-  pull_request:
-    branches: [ main ]
 
 jobs:
   deploy:
@@ -13,5 +11,17 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      - name: Delete old container
+        run: docker rm -f regex-container || true
+
+      - name: Delete old images
+        run: docker image prune -f --filter "label=regex-image" || true
+
+      - name: Build image
+        run: docker build --rm -t regex-image .
+
+      - name: Run container
+        run: docker run -d -p 8000:8000 --name regex-container regex-image
 
    
