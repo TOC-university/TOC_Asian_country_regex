@@ -39,6 +39,7 @@ def crawl_universities(
             if abbreviate == '':
                 abbreviate = extract_universities_detail_from_university_page(u_path)['abbr']
             display = slug.replace("_", " ")
+            
             names.append(IndexUniversity(name=u_name, abbreviation=abbreviate, country=display, path=u_path))
             pairs.append((u_name, country_name))
             seen.add(u_name)
