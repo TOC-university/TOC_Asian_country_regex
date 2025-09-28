@@ -24,6 +24,7 @@ DEL_TAG = re.compile(r"<[^>]+?>.*<\/[^>]+>")
 H3 = re.compile(r"<h3[^>]*>(.*?)<\/h3>")
 LI = re.compile(r"<li>(.*?)<\/li>")
 TAG_CONTENT= re.compile(r"<[^>]+?>(.*)<\/[^>]+?>")
+SPECIALIZED_PTAG = re.compile(r"specialized in ([^\.]*?)\.", re.S)
 
 HREF_HTTP = re.compile(r'(?i)<a[^>]*\bhref\s*=\s*(["\'])(https?://.*?)\1')
 KEYWORDS = re.compile(r"(?i)(?:wiki|\.com|\?|&|\.net)")
@@ -134,6 +135,17 @@ def _extract_faculties(html):
                     dl.append(content.group(1))
                 else:
                     dl.append(li)
+        if not dl:
+            at = 3
+            content = SPECIALIZED_PTAG.search(section)
+            if content:
+                faculties = content.group(1).split(',')
+                for faculty in faculties:
+                    if "and" in faculty:
+                        dl.append(faculty.split("and")[1].strip())
+                    else:
+                        dl.append(faculty.strip())
+
         dl = [DEL_TAG.sub("", d).strip() for d in dl]
         print(dl, at)
         result = dl
