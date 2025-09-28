@@ -24,10 +24,11 @@ DEL_TAG = re.compile(r"<[^>]+?>.*<\/[^>]+>")
 H3 = re.compile(r"<h3[^>]*>(.*?)<\/h3>")
 LI = re.compile(r"<li>(.*?)<\/li>")
 TAG_CONTENT= re.compile(r"<[^>]+?>(.*)<\/[^>]+?>")
-SPECIALIZED_PTAG = re.compile(r"specialized in ([^\.]*?)\.", re.S)
 
+INFOCARD_WEBSITE = re.compile(r'(?is)<table class="infobox vcard">.*?Website.*?href="(.*?)".*<\/table>')
+REFERENCES_KEYWORDS = re.compile(r"(?i)\b(References|External links)\b")
 HREF_HTTP = re.compile(r'(?i)<a[^>]*\bhref\s*=\s*(["\'])(https?://.*?)\1')
-KEYWORDS = re.compile(r"(?i)(?:wiki|\.com|\?|&|\.net)")
+BLACKLISTS = re.compile(r"(?i)(?:wiki|article|news|category|trending|[0-9]{2,}|travel|google|pedia|\.com)")
 INSTITUTION_KEYWORDS = re.compile(
     r"(?i)\b("
     r"University|College|Institute|Polytechnic|Academy|Faculty|School"
@@ -39,7 +40,7 @@ OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|Ge
 def _is_valid_website(m: str) -> bool:
     after = m.split('://', 1)[1]
     after = after.split('/')
-    return (len(after) == 1 or after[1] == '' or after[1] == 'en') and not KEYWORDS.search(m)
+    return not BLACKLISTS.search(m)
 
 def make_abbreviation(path: str) -> str:
     skip_words = {"of", "the", "and", "in", "for"}
@@ -99,6 +100,12 @@ def _extract_established_year(html):
     print(f'Established Year :   {estab_data} {at}')
     return estab_data
 
+def _clean(text):
+    text = DEL_TAG.sub("", text)
+    text = text.replace('&#93', '')
+    text = text.replace('&amp;', '&')
+    return text.strip()
+
 def _extract_faculties(html):
     at = 0
     html_sections = html.split('<div class=\"mw-heading mw-heading2\">')
@@ -117,56 +124,67 @@ def _extract_faculties(html):
     result = []
 
     for section in faculties_sections:
-        dl = DL.findall(section)
-        if not dl:
+        facu = DL.findall(section)
+        if not facu:
             #
             #TODO: Check if there are any list after each H3
             #
             at = 1
-            dl = H3.findall(section)
-            if len(dl) < 3:
-                dl = []
-        if not dl:
+            facu = H3.findall(section)
+            if len(facu) < 3 or [f for f in facu if 'graduate' in f.lower()]:
+                facu = []
+        if not facu:
             at = 2
             lis = LI.findall(section)
             for li in lis:
                 content = TAG_CONTENT.search(li)
-                if content:
-                    dl.append(content.group(1))
+                if content and not content.group(1).startswith('<'):
+                    at = 2.1
+                    facu.append(content.group(1))
                 else:
-                    dl.append(li)
-        if not dl:
-            at = 3
-            content = SPECIALIZED_PTAG.search(section)
-            if content:
-                faculties = content.group(1).split(',')
-                for faculty in faculties:
-                    if "and" in faculty:
-                        dl.append(faculty.split("and")[1].strip())
-                    else:
-                        dl.append(faculty.strip())
+                    facu.append(li)
 
-        dl = [DEL_TAG.sub("", d).strip() for d in dl]
-        print(dl, at)
-        result = dl
+        facu = [_clean(d) for d in facu]
+        # print(facu, at)
+        result = facu
         break
     # print(f'\nFaculties Sections : {len(faculties_sections)}')
     return result
 
 def _extract_campuses(html):
-    campuses = set()
-    for m in HREF_HTTP.finditer(html):
-        url = m.group(2)
-        text = m.group(0)
-        if _is_valid_website(url) and INSTITUTION_KEYWORDS.search(text):
-            campuses.add(url)
-    # print(f'Campuses :           {campuses}')
-    return list(campuses)
+    # campuses = set()
+    # for m in HREF_HTTP.finditer(html):
+    #     url = m.group(2)
+    #     text = m.group(0)
+    #     if _is_valid_website(url) and INSTITUTION_KEYWORDS.search(text):
+    #         campuses.add(url)
+    # # print(f'Campuses :           {campuses}')
+    # return list(campuses)
+    pass
 
 def _extract_website(html):
-    websites = [m.group(2) for m in HREF_HTTP.finditer(html) if _is_valid_website(m.group(2))]
+    website = None
+    result = INFOCARD_WEBSITE.search(html)
+    if result:
+        website = result.group(1) 
+        print(f'Websites :          {website} (infocard)')
+        return website  
+
+    html_sections = html.split('<div class=\"mw-heading mw-heading2\">')
+    ref_sections = []
+    for section in html_sections:
+        header2 = H2.search(section)
+        if header2 and REFERENCES_KEYWORDS.search(header2.group(1)):
+            ref_sections.append(section)
+    print(f'Reference Sections : {len(ref_sections)}')
+
+    for section in ref_sections[::-1]:
+        websites = [m.group(2) for m in HREF_HTTP.finditer(section) if _is_valid_website(m.group(2))]
+        break
+    print(f'Websites :          {websites}')
     print('--------------------------------------')
-    return websites[0] if websites else None
+    website = websites[0] if websites else []
+    return website
 
 def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr EstablishedYrs MainCampus Website
     print('fetching', path)
