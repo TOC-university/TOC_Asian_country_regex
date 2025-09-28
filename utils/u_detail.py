@@ -34,6 +34,7 @@ OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|Ge
 CAMPUS_KEYWORDS = re.compile(r"(?i)\b(Campuses|Campus|Branches|Locations|Location|Main campus|Other campuses)")
 INFOCARD_LOCATION = re.compile(r'(?is)<table class="infobox vcard">.*?locality">(.*?)<\/div>.*?country-name">(.*?)<\/div>.*<\/table>')
 BRANCH = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>([^\.]+?)[\. ]+")
+DEL_TAG_ONLY = re.compile(r"<[^>]+?>")
     
 def _is_valid_website(m: str) -> bool:
     after = m.split('://', 1)[1]
@@ -134,13 +135,16 @@ def _extract_faculties(html):
         if not facu:
             at = 2
             lis = LI.findall(section)
-            for li in lis:
-                content = TAG_CONTENT.search(li)
-                if content and not content.group(1).startswith('<'):
-                    at = 2.1
-                    facu.append(content.group(2))
+            for li in lis:    
+                if '>' not in DEL_TAG.sub("", li):
+                    facu.append(DEL_TAG_ONLY.sub("", li).split(":")[0])
                 else:
-                    facu.append(li)
+                    content = TAG_CONTENT.search(li)
+                    if content:
+                        at = 2.1
+                        facu.append(string) 
+                    else:
+                        facu.append(li)
 
         facu = [_clean(d) for d in facu]
         # print(facu, at)
@@ -159,17 +163,20 @@ def _extract_campuses(html):
             sections.append(section)
     print(f'Campus Sections : {len(sections)}')
     for section in sections:
-        h3 = H3.search(section)
-        if h3:
-            result.append(h3.group(1))
-            break
-        lis = LI.findall(section)
+        before_h3 = section.split('<h3')[0]
+        if 'li' not in before_h3:
+            h3 = H3.search(section)
+            if h3:
+                result.append(h3.group(1))
+                break
+        lis = LI.findall(before_h3)
         for li in lis:
-            content = BRANCH.search(li)
-            if content:
-                result.append(content.group(2)+content.group(3))
+            content = TAG_CONTENT.search(li)
+            if content:    
+                string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
             else:
-                result.append(li)
+                string = li if 'branch' in li.lower() else f'{li} branch'
+            result.append(string)
         print(lis)
         break
         
