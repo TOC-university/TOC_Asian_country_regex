@@ -33,6 +33,7 @@ OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|Ge
 
 CAMPUS_KEYWORDS = re.compile(r"(?i)\b(Campuses|Campus|Branches|Locations|Location|Main campus|Other campuses)")
 INFOCARD_LOCATION = re.compile(r'(?is)<table class="infobox vcard">.*?locality">(.*?)<\/div>.*?country-name">(.*?)<\/div>.*<\/table>')
+BRANCH = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>([^\.]+?)[\. ]+")
     
 def _is_valid_website(m: str) -> bool:
     after = m.split('://', 1)[1]
@@ -137,7 +138,7 @@ def _extract_faculties(html):
                 content = TAG_CONTENT.search(li)
                 if content and not content.group(1).startswith('<'):
                     at = 2.1
-                    facu.append(content.group(1))
+                    facu.append(content.group(2))
                 else:
                     facu.append(li)
 
@@ -150,14 +151,29 @@ def _extract_faculties(html):
 
 def _extract_campuses(html):
     html_sections = html.split('<div class=\"mw-heading mw-heading2\">')
+    sections = []
     result = []
     for section in html_sections:
         header2 = H2.search(section)
         if header2 and CAMPUS_KEYWORDS.search(header2.group(1)):
-            result.append(section)
-    print(f'Campus Sections : {len(result)}')
-
-    return ''
+            sections.append(section)
+    print(f'Campus Sections : {len(sections)}')
+    for section in sections:
+        h3 = H3.search(section)
+        if h3:
+            result.append(h3.group(1))
+            break
+        lis = LI.findall(section)
+        for li in lis:
+            content = BRANCH.search(li)
+            if content:
+                result.append(content.group(2)+content.group(3))
+            else:
+                result.append(li)
+        print(lis)
+        break
+        
+    return result
 
 def _extract_location(html):
     location = None
