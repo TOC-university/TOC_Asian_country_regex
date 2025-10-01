@@ -136,7 +136,7 @@ def _extract_faculties(html):
         facu = DL.findall(section)
         if not facu:
             at = 1
-            facu = H3.findall(section)
+            facu = [_clean(s) for s in H3.findall(section)]
             if len(facu) < 3 or [f for f in facu if 'graduate' in f.lower()]:
                 facu = []
         if not facu:
@@ -146,20 +146,20 @@ def _extract_faculties(html):
             lis = _get_parent_list_of_list(lis, section)
             for li in lis:    
                 if '>' not in DEL_TAG.sub("", li):
-                    facu.append(DEL_TAG_ONLY.sub("", li).split(":")[0])
+                    facu.append(_clean(DEL_TAG_ONLY.sub("", li).split(":")[0]))
                 else:
                     content = TAG_CONTENT.search(li)
                     if content:
                         at = 2.1
-                        facu.append(content.group(2)) 
+                        facu.append(_clean(content.group(2))) 
                     else:
-                        facu.append(li)
+                        facu.append(_clean(li))
         if not facu:
             at = 3
             ptags = PTAG_KEYWORD.findall(section)
             if ptags:
                 needed_ptag = DEL_TAG_ONLY.sub("|", ptags[0])
-                needed_ptag = [s for s in needed_ptag.split("|") if not re.search(r"(?i)(?:,|such|and|\.|\n)", s) ]
+                needed_ptag = [_clean(s) for s in needed_ptag.split("|") if not re.search(r"(?i)(?:,|such|and|\.|\n)", s) ]
                 facu = needed_ptag
 
         facu = [_clean(d) for d in facu]
