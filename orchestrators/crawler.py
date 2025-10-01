@@ -37,19 +37,19 @@ def crawl_universities_name(
         chunk = extract_universities_from_country_page(path)
         before = len(names)
 
+
         for u_name, u_path in chunk:
             if u_name in seen:
                 continue
             display = slug.replace("_", " ")
             
-            names.append(IndexUniversity(name=u_name, abbreviation=abbreviate, country=display, path=u_path))
+            names.append(IndexUniversity(name=u_name, country=display, path=u_path))
             pairs.append((u_name, country_name, u_path))
             seen.add(u_name)
 
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
             sources.append(src)
-        time.sleep(settings.SLEEP_SEC)
 
 
     result = sorted(names, key=lambda x: x.name)
