@@ -1,4 +1,5 @@
 import re
+import html
 from .http import fetch
 
 BOLD_IN_BRACKET = re.compile(r"\(.*?<b>([A-Z ]+)</b>.*?\)")
@@ -8,6 +9,7 @@ RIGHTSIDE_TABLE = re.compile(r"(?s)<table class=\"infobox vcard\">.*?</table>")
 IN_PTAG = re.compile(r"(?s)<p[^>]*>.*?\b([A-Z]+)\b.*?</p>")
 ATAG = re.compile(r'<a [^>]*>.*?</a>')
 BOLD_IN_PTAG = re.compile(r"(?is)(?:short).{,50}?<b>(.*?)<\/b>")
+ABBR_BLACKLIST = re.compile(r"(?i)(?:PhD)")
 
 TH_TD = re.compile(r"(?is)<th\b[^>]*>\s*Established\b[^<]*</th>\s*<td\b[^>]*>(.*?)</td>")
 YRS = re.compile(r"([12]\d{3})")
@@ -15,7 +17,7 @@ ESTAB = re.compile(r"(?i)established[^\d]{0,50}?([12]\d{3})")
 
 FACULTY_KEYWORDS = re.compile(
     r"(?i)\b("
-    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Colleges|Schools"
+    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Colleges|Schools|organisation"
     r"|Facultad|Departamento|División|Escuela|Instituto|Centro|Degrees|Degree|Structure|Training|Programs"
     r")\b"
 )
@@ -26,6 +28,7 @@ H3 = re.compile(r"<h3[^>]*>(.*?)<\/h3>")
 LI = re.compile(r"(?s)<li>(.*?)<\/li>")
 TAG_CONTENT = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>")
 PTAG_KEYWORD = re.compile(r"(?is)<p>(.*?(?:such).*?)<\/p>")
+FACULTY_BLACKLIST = re.compile(r"(?i)(?:affiliate|alumni|notable)")
 
 INFOCARD_WEBSITE = re.compile(r'(?is)<table class="infobox vcard">.*?Website.*?href="(.*?)".*<\/table>')
 REFERENCES_KEYWORDS = re.compile(r"(?i)\b(References|External links)\b")
@@ -34,9 +37,11 @@ BLACKLISTS = re.compile(r"(?i)(?:wiki|article|news|category|trending|[0-9]{2,}|t
 OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|General information)\b")
 
 CAMPUS_KEYWORDS = re.compile(r"(?i)\b(Campuses|Campus|Branches|Locations|Location|Main campus|Other campuses)")
-INFOCARD_LOCATION = re.compile(r'(?is)<table class="infobox vcard">.*?locality">(.*?)<\/div>.*?country-name">(.*?)<\/div>.*<\/table>')
+TABLE = re.compile(r'(?is)<table class="infobox vcard">(.*?)</table>')
+INFOCARD_LOCATION = re.compile(r'(?is)"(?:locality|country-name|street-address)">(.*?)</div>')
 BRANCH = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>([^\.]+?)[\. ]+")
 DEL_TAG_ONLY = re.compile(r"<[^>]+?>")
+CAMPUS_BLACKLIST = re.compile(r"(?i)(?:building|city|cities|facilities|facility|centre|court)")
     
 test1 = re.compile(r"(?s)<ul><li>(.*?)(?=(?:<\/li><\/ul>))")
 
@@ -72,20 +77,20 @@ def _extract_abbreviate(html, path):
 
     in_bracket = BOLD_IN_BRACKET.findall(html_first_section)
 
-    if not in_bracket:
+    if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
         in_bracket = BRACKET.findall(html_first_section)
         at = 1
-    if not in_bracket:
+    if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
         at = 2
         in_bracket = UPPER_COMMA.findall(html_first_section)
-    if not in_bracket:
+    if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
         at = 3
         in_bracket = BOLD_IN_PTAG.findall(html_first_section)
-    if not in_bracket:
+    if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
         at = 4
         in_bracket = IN_PTAG.findall(html_first_section)
 
-    # print(f'Abbreviate :          {in_bracket} {at}')
+    print(f'Abbreviate :          {in_bracket} {at}')
 
     if len(in_bracket) == 0:
         return f"{make_abbreviation(path)} *"
@@ -108,11 +113,15 @@ def _extract_established_year(html):
     return estab_data
 
 def _clean(text):
+    text = DEL_TAG_ONLY.sub('', text).strip()
+    text = html.unescape(text)
+    text = re.sub(r"\[\d+.*?\]", "", text).strip()
     text = DEL_TAG.sub("", text)
     text = text.replace('&#93', '')
     text = text.replace('&amp;', '&')
-    text = text.replace(',', '')
+    text = text.replace('.', '')
     text = re.sub(r'\s+', ' ', text)
+    
     return text.strip()
 
 def _extract_faculties(html):
@@ -121,14 +130,16 @@ def _extract_faculties(html):
     faculties_sections = []
     addional_sections = []
     for section in html_sections:
+        if FACULTY_BLACKLIST.search(section):
+            continue
         header2 = H2.search(section)
         # print(header2.group(1) if header2 else 'N/A', end=", ")
         if header2 and FACULTY_KEYWORDS.search(header2.group(1)):
             faculties_sections.append(section)
         if header2 and OVERVIEW.search(header2.group(1)):
             addional_sections.append(section)
-    if not faculties_sections:
-        faculties_sections = addional_sections
+    # if not faculties_sections:
+    #     faculties_sections = addional_sections
 
     result = []
 
@@ -178,67 +189,57 @@ def _extract_campuses(html):
         header2 = H2.search(section)
         if header2 and CAMPUS_KEYWORDS.search(header2.group(1)):
             sections.append(section)
-    print(f'Campus Sections : {len(sections)}')
 
     section = sections[0] if sections else ''
     before_h3 = section.split('<h3')[0]
-    if 'li' not in before_h3:
+    if '<li' not in before_h3:     #Campus as H3
+        print('pass H3')    
         h3 = H3.findall(section)
         for content in h3:
-            result.append(DEL_TAG_ONLY.sub('', content))
+            result.append(f'{_clean(DEL_TAG_ONLY.sub('', content))} campus')
 
-    if not result:
+    if not result:              #Campus as list
         lis = LI.findall(before_h3)
         at = 1
         for li in lis:
+            if CAMPUS_BLACKLIST.search(li):
+                continue
+            print(li)
             content = TAG_CONTENT.search(li)
             if content:    
                 string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
             else:
                 string = li if 'branch' in li.lower() else f'{li} branch'
-            result.append(string)
+            
+            result.append(_clean(string))
 
-    if not result:
+    if not result:          #Campus as paragraph
         h2_content = []
         for section in sections:
-            h2_content = H2.findall(section)
-            if h2_content:
+            h2_content = H2.findall(section)    
+            for content in h2_content: 
                 at = 2
-                result += (h2_content)
+                if not CAMPUS_BLACKLIST.search(content):
+                    result.append(_clean(content))  
         
     print(f'Campus     :          {result} {at}')
     return result
 
 def _extract_location(html):
     location = None
-    result = INFOCARD_LOCATION.search(html)
+    result = TABLE.search(html)
     if result:
-        location = result.group(1)
-        country = result.group(2)
-        i = 0
-        if '>' in location:
-            s = TAG_CONTENT.findall(location)
-            print(s)
-            location = ''
-            for i in range(len(s)):
-                if i > 0:
-                    location += ', '
-                loc = DEL_TAG_ONLY.sub('', s[i][1]).strip()
-                location += _clean(loc)
-        if '>' in country:
-            s = TAG_CONTENT.findall(country)
-            print(s)
-            country = ''
-            for i in range(len(s)):
-                cou = DEL_TAG_ONLY.sub('', s[i][1].strip())
-                country += _clean(cou)
+        table_html = result.group(1)
+        result = INFOCARD_LOCATION.findall(table_html)
+        result = [_clean(r) for r in result]
+        print(f'Location (infocard) : {[_clean(r) for r in result]}')
 
-        print(f'Location :          {location} {country}')
-        return f'{location}, {country}'
+        return ', '.join(result)
     return 'N/A'
 
 def _extract_website(html):
     website = None
+    websites = []
     result = INFOCARD_WEBSITE.search(html)
     if result:
         website = result.group(1) 
