@@ -53,7 +53,6 @@ def crawl_universities_name(
 
 
     result = sorted(names, key=lambda x: x.name)
-    pairs = [(u, c, p) for (u, c, p) in pairs if u in sorted(seen)]
     return result, sources, pairs
 
 def crawl_countries() -> Tuple[List[str], List[str]]:
@@ -95,7 +94,6 @@ def crawl_universities(
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
             sources.append(src)
-        time.sleep(settings.SLEEP_SEC)
 
 
     result = sorted(names, key=lambda x: x.name)
