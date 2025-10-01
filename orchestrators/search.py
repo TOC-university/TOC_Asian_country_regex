@@ -46,8 +46,8 @@ class Searcher:
         results: List[IndexUniversity] = []
         seen = set()
         for phrase, norm in zip(phrases, normalizes):
-            tokens = norm.split()
-            if tokens and tokens[0].startswith(query_norm):
+            print(norm, query_norm)
+            if norm.startswith(query_norm):
                 if phrase.name not in seen:
                     seen.add(phrase.name)
                     results.append(phrase)

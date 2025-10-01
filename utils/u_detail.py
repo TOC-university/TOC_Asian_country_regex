@@ -2,12 +2,11 @@ import re
 import html
 from .http import fetch
 
+RIGHTSIDE_TABLE = re.compile(r"(?s)<table class=\"infobox vcard\">.*?</table>") #sub
+ATAG = re.compile(r'<a [^>]*>.*?</a>') #sub
 BOLD_IN_BRACKET = re.compile(r"\(.*?<b>([A-Z ]+)</b>.*?\)")
 BRACKET = re.compile(r"[> ]\(([A-Z][A-Za-z]+)\)[< ]")
 UPPER_COMMA = re.compile(r"\(([A-Z]+),")
-RIGHTSIDE_TABLE = re.compile(r"(?s)<table class=\"infobox vcard\">.*?</table>")
-IN_PTAG = re.compile(r"(?s)<p[^>]*>.*?\b([A-Z]+)\b.*?</p>")
-ATAG = re.compile(r'<a [^>]*>.*?</a>')
 BOLD_IN_PTAG = re.compile(r"(?is)(?:short).{,50}?<b>(.*?)<\/b>")
 ABBR_BLACKLIST = re.compile(r"(?i)(?:PhD)")
 
@@ -86,10 +85,9 @@ def _extract_abbreviate(html, path):
     if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
         at = 3
         in_bracket = BOLD_IN_PTAG.findall(html_first_section)
-    if not in_bracket or ABBR_BLACKLIST.search(in_bracket[0] if in_bracket else ''):
-        at = 4
-        in_bracket = IN_PTAG.findall(html_first_section)
 
+#/wiki/Nation_University_(Thailand)
+#/wiki/Thongsuk_College
     print(f'Abbreviate :          {in_bracket} {at}')
 
     if len(in_bracket) == 0:
