@@ -8,6 +8,6 @@ Searcher = Searcher()
 @router.post("/suggest", response_model=SearchResponse)
 def search(req: SearchRequest):
     if req.rebuild or not getattr(Searcher, "_built_at", None):
-        Searcher.build(limit_units=req.limit_units)
+        Searcher.build(limit_units=req.limit_units, countries=req.countries)
     suggestions = Searcher.search(req.q, k = req.k)
     return SearchResponse(query=req.q, suggestions=suggestions, build_at=Searcher._built_at)
