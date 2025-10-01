@@ -15,7 +15,7 @@ ESTAB = re.compile(r"(?i)established[^\d]{0,50}?([12]\d{3})")
 
 FACULTY_KEYWORDS = re.compile(
     r"(?i)\b("
-    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Organization|Colleges|Schools"
+    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Colleges|Schools"
     r"|Facultad|Departamento|División|Escuela|Instituto|Centro|Degrees|Degree|Structure|Training|Programs"
     r")\b"
 )
@@ -111,6 +111,8 @@ def _clean(text):
     text = DEL_TAG.sub("", text)
     text = text.replace('&#93', '')
     text = text.replace('&amp;', '&')
+    text = text.replace(',', '')
+    text = re.sub(r'\s+', ' ', text)
     return text.strip()
 
 def _extract_faculties(html):
@@ -133,9 +135,6 @@ def _extract_faculties(html):
     for section in faculties_sections:
         facu = DL.findall(section)
         if not facu:
-            #
-            #TODO: Check if there are any list after each H3
-            #
             at = 1
             facu = H3.findall(section)
             if len(facu) < 3 or [f for f in facu if 'graduate' in f.lower()]:
@@ -144,6 +143,7 @@ def _extract_faculties(html):
             at = 2
             lis = LI.findall(section)
 
+            lis = _get_parent_list_of_list(lis, section)
             for li in lis:    
                 if '>' not in DEL_TAG.sub("", li):
                     facu.append(DEL_TAG_ONLY.sub("", li).split(":")[0])
@@ -180,24 +180,23 @@ def _extract_campuses(html):
             sections.append(section)
     print(f'Campus Sections : {len(sections)}')
 
-
-    before_h3 = section[0].split('<h3')[0]
+    section = sections[0] if sections else ''
+    before_h3 = section.split('<h3')[0]
     if 'li' not in before_h3:
-        h3 = H3.search(section)
-        if h3:
-            at = 0
-            result.append(h3.group(1))
-            return result
-    lis = LI.findall(before_h3)
-    for li in lis:
-        at = 1
-        content = TAG_CONTENT.search(li)
-        if content:    
-            string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
-        else:
-            string = li if 'branch' in li.lower() else f'{li} branch'
-        result.append(string)
+        h3 = H3.findall(section)
+        for content in h3:
+            result.append(DEL_TAG_ONLY.sub('', content))
 
+    if not result:
+        lis = LI.findall(before_h3)
+        at = 1
+        for li in lis:
+            content = TAG_CONTENT.search(li)
+            if content:    
+                string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
+            else:
+                string = li if 'branch' in li.lower() else f'{li} branch'
+            result.append(string)
 
     if not result:
         h2_content = []
@@ -219,15 +218,20 @@ def _extract_location(html):
         i = 0
         if '>' in location:
             s = TAG_CONTENT.findall(location)
-            while '>' in s[i][1]:
-                i += 1
-            location = s[i][1].strip()
-        i = 0
+            print(s)
+            location = ''
+            for i in range(len(s)):
+                if i > 0:
+                    location += ', '
+                loc = DEL_TAG_ONLY.sub('', s[i][1]).strip()
+                location += _clean(loc)
         if '>' in country:
             s = TAG_CONTENT.findall(country)
-            while '>' in s[i][1]:
-                i += 1
-            country = s[i][1].strip()            
+            print(s)
+            country = ''
+            for i in range(len(s)):
+                cou = DEL_TAG_ONLY.sub('', s[i][1].strip())
+                country += _clean(cou)
 
         print(f'Location :          {location} {country}')
         return f'{location}, {country}'
@@ -256,6 +260,18 @@ def _extract_website(html):
     # print('--------------------------------------')
     website = websites[0] if websites else []
     return website
+
+def _get_parent_list_of_list(lis, section):
+    result = []
+    parent_count = 0
+    for li in lis:
+        if '<' in li:
+            ul_count = li.count('<ul>')
+            if ul_count > parent_count:
+                parent_count = ul_count
+            else:
+                pass
+    return lis
 
 def extract_universities_detail_from_university_page(path: str, needed_data: list = []) -> dict: ##Abbr EstablishedYrs MainCampus Website
     if not needed_data:

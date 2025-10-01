@@ -4,7 +4,7 @@ from models import IndexUniversity
 
 class SearchRequest(BaseModel):
     q: str
-    k: int = 10
+    k: int = 100
     rebuild: bool = False
     limit_units: int | None = None
     countries: Optional[List[str]] = None

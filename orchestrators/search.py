@@ -6,6 +6,7 @@ from utils.university import extract_universities_from_country_page
 from orchestrators.crawler import crawl_universities, crawl_universities_name
 from config.settings import settings
 from models import IndexUniversity
+from utils.u_detail import extract_universities_detail_from_university_page
 
 def _norm(s: str) -> str:
     s = unicodedata.normalize("NFKD", s)
@@ -25,18 +26,17 @@ class Searcher:
     def build(self, limit_units: int | None = None, countries: List[str] | None = None) -> None:
         mapping = discover_country_pages()
         phrases: List[IndexUniversity] = []
+        normalizes = []
         _, _, pairs = crawl_universities_name(countries=countries)
 
         for uni, country, path in pairs:
             phrases.append(IndexUniversity(name=uni, country=country, path=path))
-
-        normalizes = [_norm(f'{p.name} ({p.country})') for p in phrases]
+            normalizes.append(_norm(f'{uni} ({country})'))
         with self._lock:
             self._phrases = phrases
             self._normalizes = normalizes
             self._built_at = time.time()
-        print(self._phrases)
-    def search(self, query: str, k: int = 10) -> List[IndexUniversity]:
+    def search(self, query: str, k: int) -> List[IndexUniversity]:
         query_norm = _norm(query)
         if not query_norm:
             return []
@@ -53,4 +53,7 @@ class Searcher:
                     results.append(phrase)
             if len(results) >= k:
                 break
+        for result in results:
+            abbreviate = extract_universities_detail_from_university_page(result.path, ['abbreviate'])['abbr']
+            result.abbreviation = abbreviate
         return results
