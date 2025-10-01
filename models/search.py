@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Optional
+from models import IndexUniversity
 
 class SearchRequest(BaseModel):
     q: str
@@ -10,5 +11,5 @@ class SearchRequest(BaseModel):
 
 class SearchResponse(BaseModel):
     query: str
-    suggestions: List[str]
+    suggestions: List[IndexUniversity]
     built_at: float | None = None

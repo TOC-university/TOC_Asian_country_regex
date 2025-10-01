@@ -52,7 +52,7 @@ def _is_generic(slug: str, text: str) -> bool:
         return True
     return False
 
-def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, str]]:        #name abbreviate path
+def extract_universities_from_country_page(path: str) -> List[Tuple[str, str]]:        #name path
     print('fetching', path)
     html = fetch(path)
     seen = set()
@@ -60,8 +60,7 @@ def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, st
 
     matched_anchor = ANCHOR.findall(html)
     for u_path, raw_text in matched_anchor:
-        possible_abbr = BRACKET.findall(raw_text)
-        text, abbreviate = _clean(raw_text), possible_abbr[0] if possible_abbr else ''
+        text = _clean(raw_text)
 
 
         if len(text) < 3: 
@@ -80,6 +79,6 @@ def extract_universities_from_country_page(path: str) -> List[Tuple[str, str, st
 
         if text not in seen:
             seen.add(text)
-            result.append((text, abbreviate, u_path))
+            result.append((text, u_path))
 
     return result

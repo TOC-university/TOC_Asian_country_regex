@@ -7,6 +7,7 @@ UPPER_COMMA = re.compile(r"\(([A-Z]+),")
 RIGHTSIDE_TABLE = re.compile(r"(?s)<table class=\"infobox vcard\">.*?</table>")
 IN_PTAG = re.compile(r"(?s)<p[^>]*>.*?\b([A-Z]+)\b.*?</p>")
 ATAG = re.compile(r'<a [^>]*>.*?</a>')
+BOLD_IN_PTAG = re.compile(r"(?is)(?:short).{,50}?<b>(.*?)<\/b>")
 
 TH_TD = re.compile(r"(?is)<th\b[^>]*>\s*Established\b[^<]*</th>\s*<td\b[^>]*>(.*?)</td>")
 YRS = re.compile(r"([12]\d{3})")
@@ -20,10 +21,11 @@ FACULTY_KEYWORDS = re.compile(
 )
 H2 = re.compile(r"<h2 id=[^>]*>(.*?)</h2>")
 DL = re.compile(r"<dl><dt>(.*?)</dt></dl>")
-DEL_TAG = re.compile(r"<[^>]+?>.*<\/[^>]+>")
+DEL_TAG = re.compile(r"(?s)<[^>]+?>.*<\/[^>]+>")
 H3 = re.compile(r"<h3[^>]*>(.*?)<\/h3>")
-LI = re.compile(r"<li>(.*?)<\/li>")
-TAG_CONTENT= re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>")
+LI = re.compile(r"(?s)<li>(.*?)<\/li>")
+TAG_CONTENT = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>")
+PTAG_KEYWORD = re.compile(r"(?is)<p>(.*?(?:such).*?)<\/p>")
 
 INFOCARD_WEBSITE = re.compile(r'(?is)<table class="infobox vcard">.*?Website.*?href="(.*?)".*<\/table>')
 REFERENCES_KEYWORDS = re.compile(r"(?i)\b(References|External links)\b")
@@ -36,6 +38,9 @@ INFOCARD_LOCATION = re.compile(r'(?is)<table class="infobox vcard">.*?locality">
 BRANCH = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>([^\.]+?)[\. ]+")
 DEL_TAG_ONLY = re.compile(r"<[^>]+?>")
     
+test1 = re.compile(r"(?s)<ul><li>(.*?)(?=(?:<\/li><\/ul>))")
+
+
 def _is_valid_website(m: str) -> bool:
     after = m.split('://', 1)[1]
     after = after.split('/')
@@ -75,6 +80,9 @@ def _extract_abbreviate(html, path):
         in_bracket = UPPER_COMMA.findall(html_first_section)
     if not in_bracket:
         at = 3
+        in_bracket = BOLD_IN_PTAG.findall(html_first_section)
+    if not in_bracket:
+        at = 4
         in_bracket = IN_PTAG.findall(html_first_section)
 
     # print(f'Abbreviate :          {in_bracket} {at}')
@@ -135,6 +143,7 @@ def _extract_faculties(html):
         if not facu:
             at = 2
             lis = LI.findall(section)
+
             for li in lis:    
                 if '>' not in DEL_TAG.sub("", li):
                     facu.append(DEL_TAG_ONLY.sub("", li).split(":")[0])
@@ -142,18 +151,26 @@ def _extract_faculties(html):
                     content = TAG_CONTENT.search(li)
                     if content:
                         at = 2.1
-                        facu.append(string) 
+                        facu.append(content.group(2)) 
                     else:
                         facu.append(li)
+        if not facu:
+            at = 3
+            ptags = PTAG_KEYWORD.findall(section)
+            if ptags:
+                needed_ptag = DEL_TAG_ONLY.sub("|", ptags[0])
+                needed_ptag = [s for s in needed_ptag.split("|") if not re.search(r"(?i)(?:,|such|and|\.|\n)", s) ]
+                facu = needed_ptag
 
         facu = [_clean(d) for d in facu]
-        # print(facu, at)
         result = facu
         break
-    # print(f'\nFaculties Sections : {len(faculties_sections)}')
+    print(f'Faculties  :          {result} {at}')
+    print(f'\nFaculties Sections : {len(faculties_sections)}')
     return result
 
 def _extract_campuses(html):
+    at = 0
     html_sections = html.split('<div class=\"mw-heading mw-heading2\">')
     sections = []
     result = []
@@ -162,24 +179,35 @@ def _extract_campuses(html):
         if header2 and CAMPUS_KEYWORDS.search(header2.group(1)):
             sections.append(section)
     print(f'Campus Sections : {len(sections)}')
-    for section in sections:
-        before_h3 = section.split('<h3')[0]
-        if 'li' not in before_h3:
-            h3 = H3.search(section)
-            if h3:
-                result.append(h3.group(1))
-                break
-        lis = LI.findall(before_h3)
-        for li in lis:
-            content = TAG_CONTENT.search(li)
-            if content:    
-                string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
-            else:
-                string = li if 'branch' in li.lower() else f'{li} branch'
-            result.append(string)
-        print(lis)
-        break
+
+
+    before_h3 = section[0].split('<h3')[0]
+    if 'li' not in before_h3:
+        h3 = H3.search(section)
+        if h3:
+            at = 0
+            result.append(h3.group(1))
+            return result
+    lis = LI.findall(before_h3)
+    for li in lis:
+        at = 1
+        content = TAG_CONTENT.search(li)
+        if content:    
+            string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
+        else:
+            string = li if 'branch' in li.lower() else f'{li} branch'
+        result.append(string)
+
+
+    if not result:
+        h2_content = []
+        for section in sections:
+            h2_content = H2.findall(section)
+            if h2_content:
+                at = 2
+                result += (h2_content)
         
+    print(f'Campus     :          {result} {at}')
     return result
 
 def _extract_location(html):
@@ -229,7 +257,9 @@ def _extract_website(html):
     website = websites[0] if websites else []
     return website
 
-def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr EstablishedYrs MainCampus Website
+def extract_universities_detail_from_university_page(path: str, needed_data: list = []) -> dict: ##Abbr EstablishedYrs MainCampus Website
+    if not needed_data:
+        needed_data = ['abbreviate', 'estab', 'location', 'campuses', 'website', 'faculties']   
     print('fetching', path)
     html = fetch(path)
     body_part_html = html.split('<body')[1]
@@ -238,12 +268,23 @@ def extract_universities_detail_from_university_page(path: str) -> dict: ##Abbr 
     body_part_html = body_part_html.split('\"bodyContent\"')[1]
     # html = html.split('<h2 id="See_also">See also</h2>')[0]
     # html = html.split('<h2 id="References">References</h2>')[0]
-
-    abbreviation = _extract_abbreviate(body_part_html, path)
-    estab_data = _extract_established_year(body_part_html)
-    campuses = _extract_campuses(body_part_html)
-    faculties = _extract_faculties(body_part_html)
-    website = _extract_website(body_part_html)
-    location = _extract_location(body_part_html)
-
+    abbreviation = ''
+    estab_data = ''
+    location = ''
+    campuses = []
+    website = ''
+    faculties = []
+    if 'abbreviate' in needed_data:
+        abbreviation = _extract_abbreviate(body_part_html, path)
+    if 'estab' in needed_data:
+        estab_data = _extract_established_year(body_part_html)
+    if 'campuses' in needed_data:
+        campuses = _extract_campuses(body_part_html)
+    if 'faculties' in needed_data:
+        faculties = _extract_faculties(body_part_html)
+    if 'website' in needed_data:
+        website = _extract_website(body_part_html)
+    if 'location' in needed_data:
+        location = _extract_location(body_part_html)
+    needed_data = []
     return {'abbr': abbreviation, 'estab': estab_data, 'location': location, 'campuses': campuses, 'website': website, 'faculties': faculties}
