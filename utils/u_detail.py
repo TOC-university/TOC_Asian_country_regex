@@ -5,8 +5,8 @@ from .http import fetch
 RIGHTSIDE_TABLE = re.compile(r"(?s)<table class=\"infobox vcard\">.*?</table>") #sub
 ATAG = re.compile(r'<a [^>]*>.*?</a>') #sub
 BOLD_IN_BRACKET = re.compile(r"\(.*?<b>([A-Z ]+)</b>.*?\)")
-BRACKET = re.compile(r"[> ]\(([A-Z][A-Za-z]+)\)[< ]")
-UPPER_COMMA = re.compile(r"\(([A-Z]+),")
+BRACKET = re.compile(r"<\/b>[> ].{,10}?\(([A-Z][A-Za-z]+)\)[< ]")
+UPPER_COMMA = re.compile(r"<\/b>.{0,10}?\(([A-Za-z ]+)\),")
 BOLD_IN_PTAG = re.compile(r"(?is)(?:short).{,50}?<b>(.*?)<\/b>")
 ABBR_BLACKLIST = re.compile(r"(?i)(?:PhD)")
 
@@ -15,10 +15,10 @@ YRS = re.compile(r"([12]\d{3})")
 ESTAB = re.compile(r"(?i)established[^\d]{0,50}?([12]\d{3})")
 
 FACULTY_KEYWORDS = re.compile(
-    r"(?i)\b("
-    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Colleges|Schools|organisation"
+    r"(?is)("
+    r"Faculty|Faculties|Department|Division|School|Institute|Center|Departments|Colleges|Schools|organisation|academic"
     r"|Facultad|Departamento|División|Escuela|Instituto|Centro|Degrees|Degree|Structure|Training|Programs"
-    r")\b"
+    r")"
 )
 H2 = re.compile(r"<h2 id=[^>]*>(.*?)</h2>")
 DL = re.compile(r"<dl><dt>(.*?)</dt></dl>")
@@ -28,21 +28,22 @@ LI = re.compile(r"(?s)<li>(.*?)<\/li>")
 TAG_CONTENT = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>")
 PTAG_KEYWORD = re.compile(r"(?is)<p>(.*?(?:such).*?)<\/p>")
 FACULTY_BLACKLIST = re.compile(r"(?i)(?:affiliate|alumni|notable)")
+OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|General information)\b")
 
 INFOCARD_WEBSITE = re.compile(r'(?is)<table class="infobox vcard">.*?Website.*?href="(.*?)".*<\/table>')
 REFERENCES_KEYWORDS = re.compile(r"(?i)\b(References|External links)\b")
 HREF_HTTP = re.compile(r'(?i)<a[^>]*\bhref\s*=\s*(["\'])(https?://.*?)\1')
 BLACKLISTS = re.compile(r"(?i)(?:wiki|article|news|category|trending|[0-9]{2,}|travel|google|pedia|\.com)")
-OVERVIEW = re.compile(r"(?i)\b(Overview|About|History|Introduction|Background|General information)\b")
 
-CAMPUS_KEYWORDS = re.compile(r"(?i)\b(Campuses|Campus|Branches|Locations|Location|Main campus|Other campuses)")
+
 TABLE = re.compile(r'(?is)<table class="infobox vcard">(.*?)</table>')
-INFOCARD_LOCATION = re.compile(r'(?is)"(?:locality|country-name|street-address)">(.*?)</div>')
+INFOCARD_LOCATION = re.compile(r'(?is)"(?:locality|state|country-name|street-address)">(.*?)</div>')
+
+CAMPUS_KEYWORDS = re.compile(r"(?i)\b(Campuses|Campus|Branches|Main campus|Other campuses)")
 BRANCH = re.compile(r"<(\w+)[^>]*>(.*?)<\/\1>([^\.]+?)[\. ]+")
 DEL_TAG_ONLY = re.compile(r"<[^>]+?>")
-CAMPUS_BLACKLIST = re.compile(r"(?i)(?:building|city|cities|facilities|facility|centre|court)")
+CAMPUS_BLACKLIST = re.compile(r"(?i)(?:building|city|cities|facilities|facility|centre|court|location)")
     
-test1 = re.compile(r"(?s)<ul><li>(.*?)(?=(?:<\/li><\/ul>))")
 
 
 def _is_valid_website(m: str) -> bool:
@@ -86,8 +87,8 @@ def _extract_abbreviate(html, path):
         at = 3
         in_bracket = BOLD_IN_PTAG.findall(html_first_section)
 
-#/wiki/Nation_University_(Thailand)
-#/wiki/Thongsuk_College
+    #/wiki/Nation_University_(Thailand)
+    #/wiki/Thongsuk_College
     print(f'Abbreviate :          {in_bracket} {at}')
 
     if len(in_bracket) == 0:
@@ -123,22 +124,22 @@ def _clean(text):
     return text.strip()
 
 def _extract_faculties(html):
-    at = 0
+    at = 0  
     html_sections = html.split('<div class=\"mw-heading mw-heading2\">')
     faculties_sections = []
     addional_sections = []
     for section in html_sections:
-        if FACULTY_BLACKLIST.search(section):
-            continue
         header2 = H2.search(section)
         # print(header2.group(1) if header2 else 'N/A', end=", ")
+        if header2 and FACULTY_BLACKLIST.search(header2.group(1)):
+            continue
         if header2 and FACULTY_KEYWORDS.search(header2.group(1)):
             faculties_sections.append(section)
         if header2 and OVERVIEW.search(header2.group(1)):
             addional_sections.append(section)
     # if not faculties_sections:
     #     faculties_sections = addional_sections
-
+    print(f'Faculties Sections : {len(faculties_sections)}')
     result = []
 
     for section in faculties_sections:
@@ -146,23 +147,32 @@ def _extract_faculties(html):
         if not facu:
             at = 1
             facu = [_clean(s) for s in H3.findall(section)]
-            if len(facu) < 3 or [f for f in facu if 'graduate' in f.lower()]:
+            if len(facu) < 3 or [f for f in facu if 'graduate' in f.lower() or 'program' in f.lower()]:
                 facu = []
         if not facu:
             at = 2
             lis = LI.findall(section)
-
-            lis = _get_parent_list_of_list(lis, section)
-            for li in lis:    
-                if '>' not in DEL_TAG.sub("", li):
-                    facu.append(_clean(DEL_TAG_ONLY.sub("", li).split(":")[0]))
-                else:
-                    content = TAG_CONTENT.search(li)
-                    if content:
-                        at = 2.1
-                        facu.append(_clean(content.group(2))) 
+            if '<li>' in ''.join(lis):  #if it's nested list
+                at = 2.1
+                lis = _get_parent_list_of_list(section)
+                facu = lis
+                print('nested found')
+            else: 
+                for li in lis:    
+                    if '>' not in DEL_TAG.sub("", li):
+                        if '<b' in li:
+                            bold = re.search(r"(?is)<b>(.*?)<\/b>", li)
+                            if bold:
+                                facu.append(_clean(bold.group(1)))
+                        else:
+                            facu.append(_clean(li.split(":")[0]))
                     else:
-                        facu.append(_clean(li))
+                        content = TAG_CONTENT.search(li)
+                        if content:
+                            at = 2.2
+                            facu.append(_clean(content.group(2))) 
+                        else:
+                            facu.append(_clean(li))
         if not facu:
             at = 3
             ptags = PTAG_KEYWORD.findall(section)
@@ -175,7 +185,7 @@ def _extract_faculties(html):
         result = facu
         break
     print(f'Faculties  :          {result} {at}')
-    print(f'\nFaculties Sections : {len(faculties_sections)}')
+    # print(f'\nFaculties Sections : {len(faculties_sections)}')
     return result
 
 def _extract_campuses(html):
@@ -194,7 +204,7 @@ def _extract_campuses(html):
         print('pass H3')    
         h3 = H3.findall(section)
         for content in h3:
-            result.append(f'{_clean(DEL_TAG_ONLY.sub('', content))} campus')
+            result.append(f'{_clean(content)} campus')
 
     if not result:              #Campus as list
         lis = LI.findall(before_h3)
@@ -202,7 +212,6 @@ def _extract_campuses(html):
         for li in lis:
             if CAMPUS_BLACKLIST.search(li):
                 continue
-            print(li)
             content = TAG_CONTENT.search(li)
             if content:    
                 string = content.group(2) if 'branch' in content.group(2).lower() else f'{content.group(2)} branch'
@@ -211,8 +220,7 @@ def _extract_campuses(html):
             
             result.append(_clean(string))
 
-    if not result:          #Campus as paragraph
-        h2_content = []
+    if not result:          #Campus as H2 ()
         for section in sections:
             h2_content = H2.findall(section)    
             for content in h2_content: 
@@ -230,7 +238,7 @@ def _extract_location(html):
         table_html = result.group(1)
         result = INFOCARD_LOCATION.findall(table_html)
         result = [_clean(r) for r in result]
-        print(f'Location (infocard) : {[_clean(r) for r in result]}')
+        print(f'Location (infocard) : {result}')
 
         return ', '.join(result)
     return 'N/A'
@@ -260,18 +268,23 @@ def _extract_website(html):
     website = websites[0] if websites else []
     return website
 
-def _get_parent_list_of_list(lis, section):
+def _get_parent_list_of_list(section):
+    li_split = section.split('<li>')[1:]
+    latest_parent = 0
+    nested_li = 0
     result = []
-    parent_count = 0
-    for li in lis:
-        if '<' in li:
-            ul_count = li.count('<ul>')
-            if ul_count > parent_count:
-                parent_count = ul_count
-            else:
-                pass
-    return lis
+    for i, li in enumerate(li_split):
+        li_count = li.count('<li>')
+        li_end_count = li.count('</li>')
 
+        nested_li += li_count - li_end_count + 1
+
+        if nested_li == 0:
+            result.append(_clean(li_split[latest_parent]))
+            latest_parent = i + 1
+            nested_li = 0
+
+    return result
 def extract_universities_detail_from_university_page(path: str, needed_data: list = []) -> dict: ##Abbr EstablishedYrs MainCampus Website
     if not needed_data:
         needed_data = ['abbreviate', 'estab', 'location', 'campuses', 'website', 'faculties']   
