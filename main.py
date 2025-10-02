@@ -9,6 +9,7 @@ from api.routers.universities import router as universities_router
 from api.routers.u_detail import router as university_details_router
 from api.routers.search import router as search_router
 from api.routers.logo_router import router as logo_router
+from api.routers.export import router as export_router
 
 BASE_DIR = os.path.dirname(__file__)  # path to apps/backend/src
 STATIC_DIR = os.path.join(BASE_DIR, "static")
@@ -30,6 +31,7 @@ app.include_router(universities_router)
 app.include_router(university_details_router)
 app.include_router(search_router)
 app.include_router(logo_router)
+app.include_router(export_router)
 
 @app.get("/health")
 def health():
