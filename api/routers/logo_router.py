@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from orchestrators.logo_crawler import get_logo_for
 import os
 
@@ -12,6 +12,7 @@ async def get_logo_info(name: str):
         raise HTTPException(status_code=404, detail="Logo not found")
     filename = os.path.basename(path)
     return {"name": name, "logo_url": f"/static/logos/{filename}"}
+
 
 @router.get("/logo/image")
 async def get_logo_image(name: str):
