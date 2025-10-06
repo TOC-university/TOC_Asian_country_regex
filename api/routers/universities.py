@@ -50,8 +50,8 @@ def crawl_universities(
             display = slug.replace("_", " ")
 
             names.append(u)
-            seen.add(u_name)
-            path_seen.add(u_path)
+            seen.add(u.name)
+            path_seen.add(u.path)
 
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
