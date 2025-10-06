@@ -65,3 +65,61 @@ class Searcher:
             abbreviate = extract_universities_detail_from_university_page(result.path, ['abbreviate'])['abbr']
             result.abbreviation = abbreviate
         return results
+    def paginated_search(
+        self,
+        query: str = None,
+        k: int = 50,
+        page: int = 1,
+        limit: int = 200
+    ) ->  dict:
+        query_norm = _norm(query) if query else None
+        with self._lock:
+            phrases = self._phrases
+            normalizes = self._normalizes
+
+        if not query_norm:
+            total = len(phrases)
+            start = (page - 1) * limit
+            end = start + limit
+            results = phrases[start:end]
+            total_pages = (total + limit - 1) // limit if limit > 0 else 1
+
+            for uni in results:
+                try:
+                    abbr = extract_universities_detail_from_university_page(uni.path, ['abbreviate']).get("abbr", "") 
+                    uni.abbreviation = abbr
+                except Exception:
+                    uni.abbreviation = "N/A"
+            return {
+                "results": results,
+                "total": total,
+                "page": page,
+                "total_pages": total_pages,
+                "limit": limit
+            }
+        results: List[IndexUniversity] = []
+        seen = set()
+        for phrases, norm in zip(phrases, normalizes):
+            if query_norm in ' '.join(norm.split('(')[:-1]):    #check for only uni name
+                if phrases.name not in seen:
+                    seen.add(phrases.name)
+                    results.append(phrases)
+        total = len(results)
+        start = (page - 1) * limit
+        end = start + limit
+        page_results = results[start:end]
+        total_pages = (total + limit - 1) // limit if limit > 0 else 1
+        for uni in page_results:
+            try:
+                abbr = extract_universities_detail_from_university_page(uni.path, ['abbreviate'])['abbr']
+                uni.abbreviation = abbr
+            except Exception:
+                uni.abbreviation = "N/A"
+        return {
+            "results": page_results,
+            "total": total,
+            "page": page,
+            "total_pages": total_pages,
+            "limit": limit
+        }
+        

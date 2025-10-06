@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query as Q
 import csv
 import io
 from fastapi.responses import StreamingResponse
@@ -23,6 +23,48 @@ def export_all_university_detail():
         writer.writerow(["Name", "Abbreviation", "Country", "Path", "Established", "Location", "Campuses", "Website", "Faculties"])  # Write header
 
         for uni in universities:
+            detail = crawl_university_detail_orch(uni.path)
+            writer.writerow([uni.name, 
+                             uni.abbreviation, 
+                             uni.country,
+                            uni.path,
+                            detail.get('estab', 'N/A'),
+                            detail.get('location', 'N/A'),
+                            "; ".join(detail.get('campuses', [])) if detail.get('campuses') else 'N/A',
+                            detail.get('website', 'N/A'),
+                            "; ".join(detail.get('faculties', [])) if detail.get('faculties') else 'N/A',
+                             ])
+
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+        return StreamingResponse(output, media_type="text/csv", headers={"Content-Disposition": "attachment; filename=universities.csv"})
+
+    except Exception as e:
+        logger.error(f"Error exporting universities: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
+
+@router.get("/all_universities_pagination", response_class=StreamingResponse)
+def export_all_university_pagination(
+    page: int = Q(1, ge=1),
+    page_size: int = Q(100, ge=1, le=500)
+):
+    try:
+        universities = crawl_universities_orch()
+        if not universities:
+            raise HTTPException(status_code=404, detail="No universities found")
+
+        start = (page - 1) * page_size
+        end = start + page_size
+        total = len(universities)
+        if start >= total:
+            raise HTTPException(status_code=404, detail="Page out of range")
+        paginated_universities = universities[start:end]
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(["Name", "Abbreviation", "Country", "Path", "Established", "Location", "Campuses", "Website", "Faculties"])  # Write header
+
+        for uni in paginated_universities:
             detail = crawl_university_detail_orch(uni.path)
             writer.writerow([uni.name, 
                              uni.abbreviation, 
