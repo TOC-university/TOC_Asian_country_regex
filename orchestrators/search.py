@@ -47,7 +47,7 @@ class Searcher:
         seen = set()
         for phrase, norm in zip(phrases, normalizes):
             print(norm, query_norm)
-            if norm.startswith(query_norm):
+            if query_norm in norm:
                 if phrase.name not in seen:
                     seen.add(phrase.name)
                     results.append(phrase)
