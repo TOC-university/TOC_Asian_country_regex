@@ -13,7 +13,7 @@ def search(req: SearchRequest):
     return SearchResponse(query=req.q, suggestions=suggestions, build_at=Searcher._built_at)
 
 @router.post("/paginated-searach", response_model=PaginatedSearchResponse)
-def search(req: PaginatedSearchRequest):
+def paginated_search(req: PaginatedSearchRequest):
     if req.rebuild or not getattr(Searcher, "_built_at", None):
         Searcher.build(limit_units=req.limit_units, countries=req.countries)
     suggestions = Searcher.paginated_search(query=req.q, page=req.page, limit=req.limit)
