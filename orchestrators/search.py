@@ -46,13 +46,21 @@ class Searcher:
         results: List[IndexUniversity] = []
         seen = set()
         for phrase, norm in zip(phrases, normalizes):
-            print(norm, query_norm)
-            if query_norm in norm:
+            if query_norm in ' '.join(norm.split('(')[:-1]):    #check for only uni name
                 if phrase.name not in seen:
                     seen.add(phrase.name)
                     results.append(phrase)
             if len(results) >= k:
                 break
+        if len(results) < k:
+            for phrase, norm in zip(phrases, normalizes):   #check for country
+                if query_norm in norm.split('(')[-1]:   
+                    if phrase.name not in seen:
+                        seen.add(phrase.name)
+                        results.append(phrase)
+                if len(results) >= k:
+                    break        
+        
         for result in results:
             abbreviate = extract_universities_detail_from_university_page(result.path, ['abbreviate'])['abbr']
             result.abbreviation = abbreviate
