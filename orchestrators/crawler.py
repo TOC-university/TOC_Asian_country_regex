@@ -26,6 +26,7 @@ def crawl_universities_name(
     sources: List[str] = []
     pairs: List[Tuple[str, str]] = []
     seen = set()
+    path_seen = set()
     country_slugs = sorted(mapping.keys())
     if countries:
         want = {c.lower() for c in countries}
@@ -39,13 +40,14 @@ def crawl_universities_name(
 
 
         for u_name, u_path in chunk:
-            if u_name in seen:
+            if u_name in seen or u_path in path_seen:
                 continue
             display = slug.replace("_", " ")
             
             names.append(IndexUniversity(name=u_name, country=display, path=u_path))
             pairs.append((u_name, country_name, u_path))
             seen.add(u_name)
+            path_seen.add(u_path)
 
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path
@@ -70,6 +72,7 @@ def crawl_universities(
     sources: List[str] = []
     pairs: List[Tuple[str, str]] = []
     seen = set()
+    path_seen = set()
     country_slugs = sorted(mapping.keys())
     if countries:
         want = {c.lower() for c in countries}
@@ -82,7 +85,7 @@ def crawl_universities(
         before = len(names)
 
         for u_name, u_path in chunk:
-            if u_name in seen:
+            if u_name in seen or u_path in path_seen:
                 continue
             abbreviate = extract_universities_detail_from_university_page(u_path, ['abbreviate'])['abbr']
             display = slug.replace("_", " ")
@@ -91,6 +94,7 @@ def crawl_universities(
             print(f'fetched university: {len(names)}')
             pairs.append((u_name, country_name, u_path))
             seen.add(u_name)
+            path_seen.add(u_path)
 
         if len(names) > before:
             src = path if path.startswith("http") else settings.BASE_URL + path

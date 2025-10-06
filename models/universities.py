@@ -9,6 +9,11 @@ class IndexUniversity(BaseModel):
     abbreviation: str | None = None
     country: str | None = None
     path: str | None = None
+    website: str | None = None
+    established: str | None = None
+    location: str | None = None
+    campuses: List[str] | None = None
+    faculties: List[str] | None = None
 
 class UniversitiesResponse(BaseModel):
     count: int

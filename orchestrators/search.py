@@ -23,6 +23,7 @@ class Searcher:
         self._phrases: List[IndexUniversity] = []
         self._normalizes: List[str] = []
         self._built_at: float | None = None
+
     def build(self, limit_units: int | None = None, countries: List[str] | None = None) -> None:
         mapping = discover_country_pages()
         phrases: List[IndexUniversity] = []
@@ -36,6 +37,7 @@ class Searcher:
             self._phrases = phrases
             self._normalizes = normalizes
             self._built_at = time.time()
+
     def search(self, query: str, k: int) -> List[IndexUniversity]:
         query_norm = _norm(query)
         if not query_norm:
@@ -62,9 +64,12 @@ class Searcher:
                     break        
         
         for result in results:
-            abbreviate = extract_universities_detail_from_university_page(result.path, ['abbreviate'])['abbr']
-            result.abbreviation = abbreviate
+            if result.abbreviation:
+                continue
+            ud = extract_universities_detail_from_university_page(result.path)
+            result.abbreviation, result.established, result.location, result.website, result.campuses, result.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
         return results
+        
     def paginated_search(
         self,
         query: str = None,
