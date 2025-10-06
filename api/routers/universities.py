@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from sympy import limit
 from models import UniversitiesRequest, UniversitiesResponse
-from orchestrators.crawler import crawl_universities as crawl_universities_orch
+from orchestrators.search import crawl_universities as crawl_universities_orch
 from typing import List, Tuple
 import logging
 logger = logging.getLogger(__name__)
