@@ -68,6 +68,8 @@ class Searcher:
                 continue
             ud = extract_universities_detail_from_university_page(result.path)
             result.abbreviation, result.established, result.location, result.website, result.campuses, result.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
+        with self._lock:
+            self._phrases = phrases
         return results
         
     def paginated_search(
@@ -97,6 +99,8 @@ class Searcher:
                     uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
                 except Exception:
                     uni.abbreviation = "N/A"
+            with self._lock:
+                self._phrases = phrases
             return {
                 "results": results,
                 "total": total,
@@ -124,6 +128,8 @@ class Searcher:
                 uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
             except Exception:
                 uni.abbreviation = "N/A"
+        with self._lock:
+            self._phrases = phrases
         return {
             "results": page_results,
             "total": total,

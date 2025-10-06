@@ -265,7 +265,7 @@ def _extract_website(html):
         break
     # print(f'Websites :          {websites}')
     # print('--------------------------------------')
-    website = websites[0] if websites else []
+    website = websites[0] if websites else 'N/A'
     return website
 
 def _get_parent_list_of_list(section):

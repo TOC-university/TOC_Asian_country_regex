@@ -22,18 +22,18 @@ def export_all_university_detail():
             writer.writerow(["Name", "Abbreviation", "Country", "Path", "Established", "Location", "Campuses", "Website", "Faculties"])  # Write header
 
             for uni in SSearcher._phrases:
-                if uni.path and uni.established and uni.location and uni.website and (uni.campuses or uni.campuses == []) and (uni.faculties or uni.faculties == []):
-                    continue
-                detail = crawl_university_detail_orch(uni.path)
+                if not (uni.path and uni.established and uni.location and uni.website and (uni.campuses or uni.campuses == []) and (uni.faculties or uni.faculties == [])):
+                    ud = crawl_university_detail_orch(uni.path)
+                    uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
                 writer.writerow([uni.name, 
-                                detail.get('abbr', 'N/A'), 
+                                uni.abbreviation, 
                                 uni.country,
                                 uni.path,
-                                detail.get('estab', 'N/A'),
-                                detail.get('location', 'N/A'),
-                                "; ".join(detail.get('campuses', [])) if detail.get('campuses') else 'N/A',
-                                detail.get('website', 'N/A'),
-                                "; ".join(detail.get('faculties', [])) if detail.get('faculties') else 'N/A',
+                                uni.established,
+                                uni.location,
+                                "; ".join(uni.campuses) if uni.campuses else 'N/A',
+                                uni.website,
+                                "; ".join(uni.faculties) if uni.faculties else 'N/A',
                                 ])
 
                 yield output.getvalue()
@@ -66,18 +66,18 @@ def export_all_university_pagination(
             writer.writerow(["Name", "Abbreviation", "Country", "Path", "Established", "Location", "Campuses", "Website", "Faculties"])  # Write header
 
             for uni in paginated_universities:
-                if uni.path and uni.established and uni.location and uni.website and (uni.campuses or uni.campuses == []) and (uni.faculties or uni.faculties == []):
-                    continue
-                detail = crawl_university_detail_orch(uni.path)
+                if not (uni.path and uni.established and uni.location and uni.website and (uni.campuses or uni.campuses == []) and (uni.faculties or uni.faculties == [])):
+                    ud = crawl_university_detail_orch(uni.path)
+                    uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
                 writer.writerow([uni.name, 
-                                detail.get('abbr', 'N/A'), 
+                                uni.abbreviation, 
                                 uni.country,
                                 uni.path,
-                                detail.get('estab', 'N/A'),
-                                detail.get('location', 'N/A'),
-                                "; ".join(detail.get('campuses', [])) if detail.get('campuses') else 'N/A',
-                                detail.get('website', 'N/A'),
-                                "; ".join(detail.get('faculties', [])) if detail.get('faculties') else 'N/A',
+                                uni.established,
+                                uni.location,
+                                "; ".join(uni.campuses) if uni.campuses else 'N/A',
+                                uni.website,
+                                "; ".join(uni.faculties) if uni.faculties else 'N/A',
                                 ])
 
                 yield output.getvalue()
