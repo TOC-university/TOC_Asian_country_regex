@@ -53,6 +53,7 @@ def crawl_universities_name(
 
 
     result = sorted(names, key=lambda x: x.name)
+    pairs = sorted(pairs, key=lambda x: x[0])
     return result, sources, pairs
 
 def crawl_countries() -> Tuple[List[str], List[str]]:
