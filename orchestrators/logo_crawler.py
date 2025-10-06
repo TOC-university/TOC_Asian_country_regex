@@ -6,6 +6,8 @@ import asyncio
 import httpx
 from utils  .http import fetch
 
+LOGO = re.compile(r'(?s)<table class="infobox.*?">.*?<img[^>]*src="([^"]+)"')
+
 STATIC_LOGOS_DIR = os.path.join(os.path.dirname(__file__), "..", "static", "logos")
 os.makedirs(STATIC_LOGOS_DIR, exist_ok=True)
 
@@ -39,7 +41,7 @@ async def get_logo_for(university_name: str):
     html_content = await fetch_wikipedia_html(university_name)
 
     # Try to extract thumbnail from infobox
-    thumb_match = re.search(r'<table class="infobox.*?">.*?<img[^>]*src="([^"]+)"', html_content, re.S)
+    thumb_match = LOGO.search(html_content)
     if thumb_match:
         thumb_url = thumb_match.group(1)
         if thumb_url.startswith('//'):

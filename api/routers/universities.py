@@ -3,6 +3,10 @@ from sympy import limit
 from models import UniversitiesRequest, UniversitiesResponse, IndexUniversity
 from typing import List, Tuple, Optional
 import logging
+from orchestrators import discover_country_pages
+from utils.u_detail import extract_universities_detail_from_university_page
+from config.settings import settings
+
 
 from api.routers.search import Searcher
 logger = logging.getLogger(__name__)
@@ -11,14 +15,14 @@ router = APIRouter(prefix="/crawl", tags=["universities"])
 
 @router.post("/universities", response_model=UniversitiesResponse)
 async def crawl_universities_route(req: UniversitiesRequest):
-    universities, sources, pairs = crawl_universities(
+    universities, sources = crawl_universities(
         countries=req.countries,
     )
     return UniversitiesResponse(count=len(universities), universities=universities, sources=sources)
 
 def crawl_universities(        
         countries: Optional[List[str]] = None
-    ) -> Tuple[List[IndexUniversity], List[str]]:            # University, Sources, Pairs
+    ) -> Tuple[List[IndexUniversity], List[str]]:            # University, Sources
     mapping = discover_country_pages()
     names: List[IndexUniversity] = []
     sources: List[str] = []
