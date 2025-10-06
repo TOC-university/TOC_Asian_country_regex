@@ -12,6 +12,9 @@ from utils.country import discover_country_pages
 from utils.university import extract_universities_from_country_page
 from config.settings import settings
 
+from routers.search import Searcher as Searcher
+
+
 def crawl_countries() -> Tuple[List[str], List[str]]:
     mapping = discover_country_pages()
     slugs = sorted(mapping.keys())
@@ -19,8 +22,8 @@ def crawl_countries() -> Tuple[List[str], List[str]]:
     return display, slugs
 
 def crawl_universities_name(        
-    countries: Optional[List[str]] = None
-) -> Tuple[List[IndexUniversity], List[str], List[str]]:
+        countries: Optional[List[str]] = None
+    ) -> Tuple[List[IndexUniversity], List[str], List[str]]:
     mapping = discover_country_pages()
     names: List[IndexUniversity] = []
     sources: List[str] = []
@@ -35,9 +38,7 @@ def crawl_universities_name(
     for slug in country_slugs:
         path = mapping[slug]
         country_name = slug.replace("_", " ").title()
-        chunk = extract_universities_from_country_page(path)
         before = len(names)
-
 
         for u_name, u_path in chunk:
             if u_name in seen or u_path in path_seen:
@@ -53,20 +54,13 @@ def crawl_universities_name(
             src = path if path.startswith("http") else settings.BASE_URL + path
             sources.append(src)
 
-
     result = sorted(names, key=lambda x: x.name)
     pairs = sorted(pairs, key=lambda x: x[0])
     return result, sources, pairs
 
-def crawl_countries() -> Tuple[List[str], List[str]]:
-    mapping = discover_country_pages()
-    slugs = sorted(mapping.keys())
-    display = [s.replace("_", " ") for s in slugs]
-    return display, slugs
-
 def crawl_universities(        
-    countries: Optional[List[str]] = None
-) -> Tuple[List[IndexUniversity], List[str], List[str]]:            # University, Sources, Pairs
+        countries: Optional[List[str]] = None
+    ) -> Tuple[List[IndexUniversity], List[str]]:            # University, Sources, Pairs
     mapping = discover_country_pages()
     names: List[IndexUniversity] = []
     sources: List[str] = []
@@ -81,18 +75,19 @@ def crawl_universities(
     for slug in country_slugs:
         path = mapping[slug]
         country_name = slug.replace("_", " ").title()
-        chunk = extract_universities_from_country_page(path)
         before = len(names)
 
-        for u_name, u_path in chunk:
-            if u_name in seen or u_path in path_seen:
+        for u in Searcher._phrases:
+            if u.country.lower() != country_name.lower():
                 continue
-            abbreviate = extract_universities_detail_from_university_page(u_path, ['abbreviate'])['abbr']
+            if u.name in seen or u.path in path_seen:
+                continue
+            if not u.abbreviation:
+                ud = extract_universities_detail_from_university_page(u.path)
+                u.abbreviation, u.established, u.location, u.website, u.campuses, u.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
             display = slug.replace("_", " ")
-            
-            names.append(IndexUniversity(name=u_name, abbreviation=abbreviate, country=display, path=u_path))
-            print(f'fetched university: {len(names)}')
-            pairs.append((u_name, country_name, u_path))
+
+            names.append(u)
             seen.add(u_name)
             path_seen.add(u_path)
 
@@ -102,8 +97,7 @@ def crawl_universities(
 
 
     result = sorted(names, key=lambda x: x.name)
-    pairs = [(u, c, p) for (u, c, p) in pairs if u in sorted(seen)]
-    return result, sources, pairs
+    return result, sources
 
 def crawl_university_detail(university: str) -> dict:
     u_data = extract_universities_detail_from_university_page(university)

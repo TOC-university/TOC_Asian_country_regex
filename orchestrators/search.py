@@ -91,8 +91,10 @@ class Searcher:
 
             for uni in results:
                 try:
-                    abbr = extract_universities_detail_from_university_page(uni.path, ['abbreviate']).get("abbr", "") 
-                    uni.abbreviation = abbr
+                    if uni.abbreviation:
+                        continue
+                    ud = extract_universities_detail_from_university_page(uni.path)
+                    uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
                 except Exception:
                     uni.abbreviation = "N/A"
             return {
@@ -116,8 +118,10 @@ class Searcher:
         total_pages = (total + limit - 1) // limit if limit > 0 else 1
         for uni in page_results:
             try:
-                abbr = extract_universities_detail_from_university_page(uni.path, ['abbreviate'])['abbr']
-                uni.abbreviation = abbr
+                if uni.abbreviation:
+                    continue
+                ud = extract_universities_detail_from_university_page(uni.path)
+                uni.abbreviation, uni.established, uni.location, uni.website, uni.campuses, uni.faculties = ud["abbr"], ud["estab"], ud["location"], ud["website"], ud["campuses"], ud["faculties"]
             except Exception:
                 uni.abbreviation = "N/A"
         return {

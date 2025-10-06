@@ -89,7 +89,7 @@ def _extract_abbreviate(html, path):
 
     #/wiki/Nation_University_(Thailand)
     #/wiki/Thongsuk_College
-    print(f'Abbreviate :          {in_bracket} {at}')
+    # print(f'Abbreviate :          {in_bracket} {at}')
 
     if len(in_bracket) == 0:
         return f"{make_abbreviation(path)} *"
@@ -139,7 +139,7 @@ def _extract_faculties(html):
             addional_sections.append(section)
     # if not faculties_sections:
     #     faculties_sections = addional_sections
-    print(f'Faculties Sections : {len(faculties_sections)}')
+    # print(f'Faculties Sections : {len(faculties_sections)}')
     result = []
 
     for section in faculties_sections:
@@ -156,7 +156,7 @@ def _extract_faculties(html):
                 at = 2.1
                 lis = _get_parent_list_of_list(section)
                 facu = lis
-                print('nested found')
+                # print('nested found')
             else: 
                 for li in lis:    
                     if '>' not in DEL_TAG.sub("", li):
@@ -184,7 +184,7 @@ def _extract_faculties(html):
         facu = [_clean(d) for d in facu]
         result = facu
         break
-    print(f'Faculties  :          {result} {at}')
+    # print(f'Faculties  :          {result} {at}')
     # print(f'\nFaculties Sections : {len(faculties_sections)}')
     return result
 
@@ -201,7 +201,7 @@ def _extract_campuses(html):
     section = sections[0] if sections else ''
     before_h3 = section.split('<h3')[0]
     if '<li' not in before_h3:     #Campus as H3
-        print('pass H3')    
+        # print('pass H3')    
         h3 = H3.findall(section)
         for content in h3:
             result.append(f'{_clean(content)} campus')
@@ -228,7 +228,7 @@ def _extract_campuses(html):
                 if not CAMPUS_BLACKLIST.search(content):
                     result.append(_clean(content))  
         
-    print(f'Campus     :          {result} {at}')
+    # print(f'Campus     :          {result} {at}')
     return result
 
 def _extract_location(html):
@@ -238,7 +238,7 @@ def _extract_location(html):
         table_html = result.group(1)
         result = INFOCARD_LOCATION.findall(table_html)
         result = [_clean(r) for r in result]
-        print(f'Location (infocard) : {result}')
+        # print(f'Location (infocard) : {result}')
 
         return ', '.join(result)
     return 'N/A'

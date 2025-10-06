@@ -60,7 +60,6 @@ def export_all_university_pagination(
         if start >= total:
             raise HTTPException(status_code=404, detail="Page out of range")
         paginated_universities = SSearcher._phrases[start:end]
-        print(len(paginated_universities), start, end, total)
         def generate():
             output = io.StringIO()
             writer = csv.writer(output)
@@ -105,8 +104,6 @@ def export_search_suggestions(q: str, k: int = 10):
             yield output.getvalue()
             output.seek(0)
             for suggestion in suggestions:
-                if suggestion.path and suggestion.established and suggestion.location and suggestion.website and (suggestion.campuses or suggestion.campuses == []) and (suggestion.faculties or suggestion.faculties == []):
-                    continue
                 writer.writerow([q, suggestion.name, getattr(suggestion, "abbreviation", "N/A"), getattr(suggestion, "country", "N/A"), suggestion.path])
             yield output.getvalue()
             output.seek(0)
