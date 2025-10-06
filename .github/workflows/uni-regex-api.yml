@@ -1,0 +1,27 @@
+name: deploy api
+on:
+  push:
+    branches: 
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Delete old container
+        run: docker rm -f regex-container || true
+
+      - name: Delete old images
+        run: docker image prune -f --filter "label=regex-image" || true
+
+      - name: Build image
+        run: docker build --rm -t regex-image .
+
+      - name: Run container
+        run: docker run --restart unless-stopped -d -p 8000:8000 --name regex-container regex-image
+
+   
